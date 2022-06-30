@@ -1,0 +1,170 @@
+import numpy as np
+import pandas as pd
+import dill
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import QuantileTransformer
+from sklearn.decomposition import PCA
+from sklearn.decomposition import TruncatedSVD as SVD
+from sklearn.decomposition import KernelPCA
+from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import KMeansSMOTE
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.over_sampling import SVMSMOTE
+from imblearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV 
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.svm import SVC
+import shap
+import umap
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, roc_curve, auc, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from sklearn.preprocessing import StandardScaler
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+
+class Model:
+	''' 
+	Train a model to classify LFS patients 
+
+	Arguments
+	datafile: feature matrix with labels, includes header
+	model_type: string specifying one of rf, gbt, svm, log
+	base: string specifying output directory
+	'''
+	def __init__(self, datafile, model_type, base):
+		'''read in dataframe and initialize model'''
+		self.df = pd.read_csv(datafile) # read in data
+		self.base = base+"/"
+		if model_type == "rf":
+			self.model = RandomForestClassifier() # initialize model type
+		elif model_type == "gbt":
+			self.model = GradientBoostingClassifier()
+		elif model_type == "svm":
+			self.model = SVC(probability=True)
+		else:
+			self.model = LogisticRegression()
+
+	def split(self):
+		'''split data into training and testing'''
+		y = self.df[["TP53"]] # labels
+		data = self.df.drop(labels="TP53", axis=1) # remove labels from data
+		self.folds = StratifiedKFold(n_splits=5, shuffle=False) # use same folds for each estimator
+		self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(data, y, test_size=0.30, stratify=y, shuffle=True) # split into training and testing sets
+
+	def save_splits(self):
+		''' save files ''' 
+		dill.dump(self.x_train, file = open(self.base+"x_train", "wb")) # save x_train file
+		dill.dump(self.y_train, file = open(self.base+"y_train", "wb"))
+		dill.dump(self.x_test, file = open(self.base+"x_test", "wb"))
+		dill.dump(self.y_test, file = open(self.base+"y_test", "wb"))
+		dill.dump(self.folds, file = open(self.base+"folds", "wb"))
+		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column after saving
+		self.x_test = self.x_test.drop(labels='sample', axis=1)
+
+	def pipeline(self, pipeline_options): 
+		''' 
+		initiate pipeline object
+
+		Arguments
+		pipeline_options: ordered dictionary specifying which pipeline steps to include
+		'''
+		d = dict()
+		d['StandardScaler()'] = StandardScaler()
+		d['PCA()'] = PCA()
+		d['SMOTE()'] = SMOTE()
+		pipe = list() # list to hold pipeline tuples
+		for k, v in pipeline_options.items(): # pipeline_options must be ordered list
+			if v is not None: # remove steps set to None
+				v2 = d[v] # change pipeline options from strings to functions
+				k = (k, v2) # make tuple of each step from dictionary
+				pipe.append(k) # append step to list
+		self.pipeline = Pipeline(pipe) # initialize pipeline, reassigned in param dict
+
+	def parameters(self):	
+		''' initiate parameter dictionary '''
+		self.param = {} # dictionary for parameter options 
+		self.param['normalization'] = [StandardScaler(), RobustScaler(), MinMaxScaler(), QuantileTransformer()] # normalization options
+		self.param['dimensionality_reduction'] = [PCA(n_components=0.9)] # dimensionatliy reduction options
+		self.param['dimensionality_reduction__n_components'] = [0.8, 0.85, 0.9, 0.95] # components for PCA
+		self.param['sampling'] = [SMOTE(), KMeansSMOTE(), SVMSMOTE(), BorderlineSMOTE()]  # oversampling options
+		if self.model == RandomForestClassifier: # parameters specific to each model
+			self.param['classifier__n_estimators'] = [1000, 1500, 2000, 2500] 
+			self.param['classifier__max_features'] = [8, 10, 12, 14, 16, 18, 20, 22]
+			self.param['classifier__min_samples_leaf'] = [1, 3, 5, 7, 9]
+			self.param['classifier__min_samples_split'] = [2, 4, 6, 8]
+		if self.model == GradientBoostingClassifier():
+			self.param['classifier__n_estimators'] = [1000, 1500, 2000, 2500] 
+			self.param['classifier__learning_rate'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+			self.param['classifier__min_samples_leaf'] = [1, 3, 5, 7, 9, 11, 13]
+			self.param['classifier__min_samples_split'] = [2, 4, 6, 8, 10]
+		if self.model == SVC(probability=True):
+			self.param['classifier__C'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+			self.param['classifier__kernel'] = ['linear', 'poly', 'rbf', 'sigmoid'] # if poly works well then tune degree 
+			self.param['classifier__degree'] = [2, 3, 4, 5, 6] # degree for poly
+			self.param['classifier__gamma'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+		if self.model == LogisticRegression():
+			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
+			self.param['classifier__penalty'] = ['l1', 'l2', 'elasticnet']
+			self.param['classifier__solver'] = ['saga', 'newton-cg', 'lbfgs', 'liblinear', 'sag'] # some will give errors because not compatible with penalty
+			self.param['classifier__max_iter'] = [1500]
+
+	def fit(self, score):
+		''' fit model with grid search '''
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=self.folds, n_jobs=-1, scoring=score, refit=score).fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
+		dill.dump(self.gs, file = open(base+"model_"+model_type, "wb"))
+
+	def shap(self):
+		''' find feature importance with shap '''
+		explainer = shap.KernelExplainer(self.gs.predict_proba, self.train_x) #shap.sample(train_x, 50)) # explain predictions of the model
+		#test_sample = test_x.iloc[:250,:]
+		self.shap_values = explainer.shap_values(self.test_x)
+		dill.dump(shap_values, file = open(base+"shapvalues", "wb"))
+
+	def predict(self):
+		self.test_pred = self.gs.best_estimator_.predict(self.test_x)
+		self.test_prob = self.gs.best_estimator_.predict_proba(self.test_x)
+		self.cm = confusion_matrix(y_true = self.test_y.values.ravel(), y_pred = self.test_pred)
+
+	def acc(self): # accuracy
+		return (accuracy_score(y_true=self.test_y, y_pred=self.test_pred))
+	
+	def prec(self): # ppv
+		return (precision_score(y_true=self.test_y, y_pred=self.test_pred))
+
+	def recall(self): # recall
+		return (recall_score(y_true=self.test_y, y_pred=self.test_pred,))
+
+	def npv(self): # npv 
+  		return (self.cm[0,0]/(self.cm[0,0]+self.cm[1,0]))
+
+	def spec(self): # specificity
+  		return (self.cm[0,0]/(self.cm[0,0]+self.cm[0,1]))
+	
+	def f1(self): # f1 score
+		return (f1_score(y_true=self.test_y, y_pred=self.test_pred))
+
+	def calc_auc(self): # auroc
+		fpr, tpr, _ = roc_curve(self.test_y, self.test_prob[:,1]) # fpr and tpr 
+		return (auc(fpr, tpr)) 
+	
+	def calc_auprc(self): # auprc
+		return (average_precision_score(self.test_y, test_prob[:, 1]))
+
+	def score(self): 
+		''' calculate test scores '''
+		self.score = {}
+		self.score["accuracy"] = self.acc() 
+		self.score["precision"] = self.prec()
+		self.score["recall"] = self.recall()
+		self.score["npv"] = self.npv()
+		self.score["specificity"] = self.spec()
+		self.score["f1"] = self.f1()
+		self.score["auc"] = self.calc_auc() 
+		self.score["auprc"] = self.calc_auprc()
