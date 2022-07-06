@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from sklearn.preprocessing import StandardScaler
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+import warnings
 
 class Model:
 	''' 
@@ -85,6 +86,7 @@ class Model:
 		k = self.pipeline.get_params().keys() # steps in pipeline
 		self.param = {} # dictionary for parameter options 
 		if 'normalization' in k:
+			warnings.filterwarnings("ignore", message="n_quantiles is greater than the total number of samples. n_quantiles is set to n_samples.")
 			self.param['normalization'] = [StandardScaler(), RobustScaler(), MinMaxScaler(), QuantileTransformer()] # normalization options
 		if 'dimensionality_reduction' in k:
 			self.param['dimensionality_reduction'] = [PCA()] # dimensionatliy reduction options
@@ -122,7 +124,7 @@ class Model:
 			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
 			self.param['classifier__penalty'] = ['l1', 'l2', 'elasticnet']
 			self.param['classifier__solver'] = ['saga', 'newton-cg', 'lbfgs', 'liblinear', 'sag'] # some will give errors because not compatible with penalty
-			self.param['classifier__max_iter'] = [5000]
+			self.param['classifier__max_iter'] = [50000]
 
 	def fit(self, score, model_type):
 		''' 
@@ -145,7 +147,10 @@ class Model:
 		self.gs = dill.load(open(self.base+"model_"+model_type, "rb"))
 		self.x_train = dill.load(open(self.base+"x_train", "rb"))
 		self.x_test = dill.load(open(self.base+"x_test", "rb"))
-		self.y_test = dill.load(open(self.base+"y_test", "rb"))				
+		self.y_test = dill.load(open(self.base+"y_test", "rb"))
+		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column 
+		self.x_test = self.x_test.drop(labels='sample', axis=1)
+
 	def shap(self):
 		''' find feature importance with shap '''
 		explainer = shap.KernelExplainer(self.gs.predict_proba, self.x_train) #shap.sample(x_train, 50)) # explain predictions of the model
@@ -181,7 +186,7 @@ class Model:
 		return (auc(fpr, tpr)) 
 	
 	def calc_auprc(self): # auprc
-		return (average_precision_score(self.y_test, test_prob[:, 1]))
+		return (average_precision_score(self.y_test, self.test_prob[:, 1]))
 
 	def score(self): 
 		''' calculate test scores '''

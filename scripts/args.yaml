@@ -1,10 +1,11 @@
 # dictionary of arguments
 datafile: "/hpf/largeprojects/davidm/blaverty/classify_lfs/final_model_input.csv" 
+base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/all"
+n_samples: 246
 model_type: "log"
-base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/test"
 score: "f1"
 pipeline_options: # dictionary, set to "None" to omit step
-        'normalization': StandardScaler()
-        'dimensionality_reduction': PCA()
-        'sampling': "None" 
-        'classifier': RandomForestClassifier()
+        'normalization': StandardScaler() # StandardScaler() or "None"
+        'dimensionality_reduction': PCA() # PCA() or "None"
+        'sampling': SMOTE() # SMOTE() or "None"
+        'classifier': RandomForestClassifier() # RandomForestClassifier() or "None"
