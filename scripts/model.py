@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import dill
 from sklearn.model_selection import train_test_split
@@ -123,8 +122,8 @@ class Model:
 			self.param['classifier'] = [LogisticRegression()]
 			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
 			self.param['classifier__penalty'] = ['l1', 'l2', 'elasticnet']
-			self.param['classifier__solver'] = ['saga', 'newton-cg', 'lbfgs', 'liblinear', 'sag'] # some will give errors because not compatible with penalty
-			self.param['classifier__max_iter'] = [50000]
+			self.param['classifier__solver'] = ['saga', 'liblinear', 'newton-cg', 'lbfgs', 'sag'] # some will give errors because not compatible with penalty
+			self.param['classifier__max_iter'] = [5000]
 
 	def fit(self, score, model_type):
 		''' 
@@ -199,3 +198,33 @@ class Model:
 		self.score["f1"] = self.f1()
 		self.score["auc"] = self.calc_auc() 
 		self.score["auprc"] = self.calc_auprc()
+
+	def score_list(self, auprc, auc, prec, recall, f1, spec, npv):
+		''' add scores to master lists to calculate confidence intervals '''
+		auprc.append(self.score["auprc"])
+		auc.append(self.score["auc"])
+		prec.append(self.score["precision"])
+		recall.append(self.score["recall"])
+		f1.append(self.score["f1"])
+		spec.append(self.score["specificity"])
+		npv.append(self.score["npv"])
+		return(auprc, auc, prec, recall, f1, spec, npv)
+
+	def save_score_list(self, model_type):
+		''' save files ''' 
+		dill.dump(self.score["auprc"], file = open(self.base+"model_type_"+"auprc", "wb")) # save x_train file
+		dill.dump(self.score["auc"], file = open(self.base+"model_type_"+"auc", "wb"))
+		dill.dump(self.score["precision"], file = open(self.base+"model_type_"+"precision", "wb"))
+		dill.dump(self.score["recall"], file = open(self.base+"model_type_"+"recall", "wb"))
+		dill.dump(self.score["f1"], file = open(self.base+"model_type_"+"f1", "wb"))
+		dill.dump(self.score["specificity"], file = open(self.base+"model_type_"+"specificity", "wb"))
+		dill.dump(self.score["npv"], file = open(self.base+"model_type_"+"npv", "wb"))
+
+	def conf_int(self, stat, name):
+		alpha = 0.95
+		p = ((1.0-alpha)/2.0) * 100
+		lower = max(0.0, np.percentile(stat, p))
+		p = (alpha+((1.0-alpha)/2.0)) * 100
+		upper = min(1.0, np.percentile(stat, p))
+		print(name,' %.1f CI: %.1f%% and %.1f%%' % (alpha*100, lower*100, upper*100))
+

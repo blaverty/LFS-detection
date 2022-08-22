@@ -1,9 +1,9 @@
 # dictionary of arguments
-datafile: "/hpf/largeprojects/davidm/blaverty/classify_lfs/final_model_input.csv" 
-base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/all"
+datafile: "/hpf/largeprojects/davidm/blaverty/classify_lfs/final_model_input.csv" # input file
+base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/all" # output
 n_samples: 246
-model_type: "log"
-score: "f1"
+model_type: "log" # "rf", "log", "svm", "gbt"
+score: "f1" # score to optimize in grid search
 pipeline_options: # dictionary, set to "None" to omit step
         'normalization': StandardScaler() # StandardScaler() or "None"
         'dimensionality_reduction': PCA() # PCA() or "None"
