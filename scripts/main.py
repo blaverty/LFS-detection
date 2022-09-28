@@ -1,14 +1,17 @@
 from ruamel import yaml
 from model import Model # import my class
+import dill
 
 def main():
 	stream = open('args.yaml', 'r')
 	args = yaml.load(stream, Loader=yaml.Loader) # load yaml file for arguments
+	print("arguments loaded")
 	datafile = args['datafile']
 	model_type = args['model_type']
 	base = args['base']
 	score = args['score']
 	pipeline_options = args['pipeline_options'] # loading order of dict perserved
+
 	auprc = []
 	auc = []
 	prec = []
@@ -18,6 +21,7 @@ def main():
 	npv = []
 
 	for i in range(100):
+		print(i)
 		model = Model(datafile=datafile, base=base) # initiate
 		model.split() # training and test splits	
 		model.save_splits()
@@ -31,6 +35,7 @@ def main():
 		model.predict()	# predict on test set	
 		model.score() # calculate score
 		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv) # save score to list for CI
+		print(auprc)
 
 	model.save_score_list(model_type)
 	model.conf_int(auprc, "auprc") # calculate confidence intervals after iterations 

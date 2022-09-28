@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import dill
 from sklearn.model_selection import train_test_split
@@ -114,10 +115,10 @@ class Model:
 			self.param['classifier__min_samples_split'] = [2, 4, 6, 8, 10]
 		if model_type ==  "svm":
 			self.param['classifier'] = [SVC(probability=True)]
-			self.param['classifier__C'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+			self.param['classifier__C'] = [0.0001, 0.001, 0.01, 0.1, 1, 10]
 			self.param['classifier__kernel'] = ['linear', 'poly', 'rbf', 'sigmoid'] # if poly works well then tune degree 
-			self.param['classifier__degree'] = [2, 3, 4, 5, 6] # degree for poly
-			self.param['classifier__gamma'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+			self.param['classifier__degree'] = [2, 3, 4, 5] # degree for poly
+			self.param['classifier__gamma'] = [0.0001, 0.001, 0.01, 0.1, 1, 10]
 		if model_type == "log":
 			self.param['classifier'] = [LogisticRegression()]
 			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
@@ -200,7 +201,7 @@ class Model:
 		self.score["auprc"] = self.calc_auprc()
 
 	def score_list(self, auprc, auc, prec, recall, f1, spec, npv):
-		''' add scores to master lists to calculate confidence intervals '''
+		''' add scores to master lists to calculate confidence intervals '''	
 		auprc.append(self.score["auprc"])
 		auc.append(self.score["auc"])
 		prec.append(self.score["precision"])
@@ -211,16 +212,17 @@ class Model:
 		return(auprc, auc, prec, recall, f1, spec, npv)
 
 	def save_score_list(self, model_type):
-		''' save files ''' 
-		dill.dump(self.score["auprc"], file = open(self.base+"model_type_"+"auprc", "wb")) # save x_train file
-		dill.dump(self.score["auc"], file = open(self.base+"model_type_"+"auc", "wb"))
-		dill.dump(self.score["precision"], file = open(self.base+"model_type_"+"precision", "wb"))
-		dill.dump(self.score["recall"], file = open(self.base+"model_type_"+"recall", "wb"))
-		dill.dump(self.score["f1"], file = open(self.base+"model_type_"+"f1", "wb"))
-		dill.dump(self.score["specificity"], file = open(self.base+"model_type_"+"specificity", "wb"))
-		dill.dump(self.score["npv"], file = open(self.base+"model_type_"+"npv", "wb"))
+		''' save scores for each iteration ''' 
+		open(self.base+model_type+"_auprc","a").write(self.score["auprc"])
+		open(self.base+model_type+"_auc","a").write(self.score["auc"])
+		open(self.base+model_type+"_precision","a").write(self.score["precision"])
+		open(self.base+model_type+"_recall","a").write(self.score["recall"])
+		open(self.base+model_type+"_f1","a").write(self.score["f1"])
+		open(self.base+model_type+"_specificity","a").write(self.score["specificity"])
+		open(self.base+model_type+"_npv","a").write(self.score["npv"])
 
 	def conf_int(self, stat, name):
+		print(stat)
 		alpha = 0.95
 		p = ((1.0-alpha)/2.0) * 100
 		lower = max(0.0, np.percentile(stat, p))
