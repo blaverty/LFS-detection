@@ -20,7 +20,7 @@ def main():
 	spec = []
 	npv = []
 
-	for i in range(100):
+	for i in range(10):
 		print(i)
 		model = Model(datafile=datafile, base=base) # initiate
 		model.split() # training and test splits	
@@ -34,6 +34,7 @@ def main():
 #		print(model.gs.best_estimator_.get_params())
 		model.predict()	# predict on test set	
 		model.score() # calculate score
+		print("here")
 		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv) # save score to list for CI
 		print(auprc)
 

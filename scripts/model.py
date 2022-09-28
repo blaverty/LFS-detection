@@ -190,36 +190,35 @@ class Model:
 
 	def score(self): 
 		''' calculate test scores '''
-		self.score = {}
-		self.score["accuracy"] = self.acc() 
-		self.score["precision"] = self.prec()
-		self.score["recall"] = self.recall()
-		self.score["npv"] = self.npv()
-		self.score["specificity"] = self.spec()
-		self.score["f1"] = self.f1()
-		self.score["auc"] = self.calc_auc() 
-		self.score["auprc"] = self.calc_auprc()
+		self.accuracy = self.acc() 
+		self.precision = self.prec()
+		self.recall = self.recall()
+		self.npv = self.npv()
+		self.specificity = self.spec()
+		self.f1 = self.f1()
+		self.auc = self.calc_auc() 
+		self.auprc = self.calc_auprc()
 
 	def score_list(self, auprc, auc, prec, recall, f1, spec, npv):
 		''' add scores to master lists to calculate confidence intervals '''	
-		auprc.append(self.score["auprc"])
-		auc.append(self.score["auc"])
-		prec.append(self.score["precision"])
-		recall.append(self.score["recall"])
-		f1.append(self.score["f1"])
-		spec.append(self.score["specificity"])
-		npv.append(self.score["npv"])
+		auprc.append(self.auprc)
+		auc.append(self.auc)
+		prec.append(self.precision)
+		recall.append(self.recall)
+		f1.append(self.f1)
+		spec.append(self.specificity)
+		npv.append(self.npv)
 		return(auprc, auc, prec, recall, f1, spec, npv)
 
-	def save_score_list(self, model_type):
+	def save_score_list(self, model_type, auprc, auc, prec, recall, f1, spec, npv):
 		''' save scores for each iteration ''' 
-		open(self.base+model_type+"_auprc","a").write(self.score["auprc"])
-		open(self.base+model_type+"_auc","a").write(self.score["auc"])
-		open(self.base+model_type+"_precision","a").write(self.score["precision"])
-		open(self.base+model_type+"_recall","a").write(self.score["recall"])
-		open(self.base+model_type+"_f1","a").write(self.score["f1"])
-		open(self.base+model_type+"_specificity","a").write(self.score["specificity"])
-		open(self.base+model_type+"_npv","a").write(self.score["npv"])
+		open(self.base+model_type+"_auprc","a").write(auprc)
+		open(self.base+model_type+"_auc","a").write(auc)
+		open(self.base+model_type+"_precision","a").write(precision)
+		open(self.base+model_type+"_recall","a").write(recall)
+		open(self.base+model_type+"_f1","a").write(f1)
+		open(self.base+model_type+"_specificity","a").write(specificity)
+		open(self.base+model_type+"_npv","a").write(npv)
 
 	def conf_int(self, stat, name):
 		print(stat)
