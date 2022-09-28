@@ -48,7 +48,6 @@ class Model:
 		'''split data into training and testing'''
 		y = self.df[["TP53"]] # labels
 		data = self.df.drop(labels="TP53", axis=1) # remove labels from data
-		self.folds = StratifiedKFold(n_splits=5, shuffle=False) # use same folds for each estimator
 		self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(data, y, test_size=0.30, stratify=y, shuffle=True) # split into training and testing sets
 
 	def save_splits(self):
@@ -57,7 +56,6 @@ class Model:
 		dill.dump(self.y_train, file = open(self.base+"y_train", "wb"))
 		dill.dump(self.x_test, file = open(self.base+"x_test", "wb"))
 		dill.dump(self.y_test, file = open(self.base+"y_test", "wb"))
-		dill.dump(self.folds, file = open(self.base+"folds", "wb"))
 		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column after saving
 		self.x_test = self.x_test.drop(labels='sample', axis=1)
 
@@ -134,7 +132,7 @@ class Model:
 		score: string specifying score to optimize during CV
 		model_type: string specifying classifier.  one of rf, gbt, svm, log
 		'''
-		self.gs = GridSearchCV(self.pipeline, self.param, cv=self.folds, n_jobs=-1, scoring=score, refit=score).fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=5, n_jobs=-1, scoring=score, refit=score).fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
 		dill.dump(self.gs, file = open(self.base+"model_"+model_type, "wb"))
 	def import_files(self, model_type):
 		''' 
