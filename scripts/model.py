@@ -210,13 +210,13 @@ class Model:
 
 	def save_score_list(self, model_type, auprc, auc, prec, recall, f1, spec, npv):
 		''' save scores for each iteration ''' 
-		open(self.base+model_type+"_auprc","a").write(auprc)
-		open(self.base+model_type+"_auc","a").write(auc)
-		open(self.base+model_type+"_precision","a").write(precision)
-		open(self.base+model_type+"_recall","a").write(recall)
-		open(self.base+model_type+"_f1","a").write(f1)
-		open(self.base+model_type+"_specificity","a").write(specificity)
-		open(self.base+model_type+"_npv","a").write(npv)
+		open(self.base+model_type+"_auprc","a").write("\n".join(map(str, auprc)))
+		open(self.base+model_type+"_auc","a").write("\n".join(map(str, auc)))
+		open(self.base+model_type+"_precision","a").write("\n".join(map(str, prec)))
+		open(self.base+model_type+"_recall","a").write("\n".join(map(str, recall)))
+		open(self.base+model_type+"_f1","a").write("\n".join(map(str, f1)))
+		open(self.base+model_type+"_npv","a").write("\n".join(map(str, npv)))
+		open(self.base+model_type+"_specificity","a").write("\n".join(map(str, spec)))
 
 	def conf_int(self, stat, name):
 		print(stat)

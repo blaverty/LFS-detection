@@ -20,8 +20,7 @@ def main():
 	spec = []
 	npv = []
 
-	for i in range(10):
-		print(i)
+	for i in range(20):
 		model = Model(datafile=datafile, base=base) # initiate
 		model.split() # training and test splits	
 		model.save_splits()
@@ -29,16 +28,14 @@ def main():
 		model.parameters_preprocessing() # make parameters
 		model.parameters_classifier(model_type)  
 		model.fit(score=score, model_type=model_type) # grid search
-# 		model.shap()
-#		model.import_files(model_type=model_type)
-#		print(model.gs.best_estimator_.get_params())
+## 		model.shap()
+##		model.import_files(model_type=model_type)
+##		print(model.gs.best_estimator_.get_params())
 		model.predict()	# predict on test set	
 		model.score() # calculate score
-		print("here")
 		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv) # save score to list for CI
-		print(auprc)
 
-	model.save_score_list(model_type)
+	model.save_score_list(model_type, auprc, auc, prec, recall, f1, spec, npv)
 	model.conf_int(auprc, "auprc") # calculate confidence intervals after iterations 
 	model.conf_int(auc, "auc")
 	model.conf_int(prec, "precision")
