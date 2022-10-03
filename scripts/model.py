@@ -58,10 +58,10 @@ class Model:
 		Arguments
 		model_type: string specifing classifier type.  one of rf, svm, log, gbt
 		'''
-		dill.dump(self.x_train, file = open(self.base+"/train_test_splits/"+model_type+"/x_train", "wb")) 
-		dill.dump(self.y_train, file = open(self.base+"/train_test_splits/"+model_type+"/y_train", "wb"))
-		dill.dump(self.x_test, file = open(self.base+"/train_test_splits/"+model_type+"/x_test", "wb"))
-		dill.dump(self.y_test, file = open(self.base+"/train_test_splits/"+model_type+"/y_test", "wb"))
+		dill.dump(self.x_train, file = open(self.base+"/"+model_type+"/x_train", "wb")) 
+		dill.dump(self.y_train, file = open(self.base+"/"+model_type+"/y_train", "wb"))
+		dill.dump(self.x_test, file = open(self.base+"/"+model_type+"/x_test", "wb"))
+		dill.dump(self.y_test, file = open(self.base+"/"+model_type+"/y_test", "wb"))
 		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column after saving
 		self.x_test = self.x_test.drop(labels='sample', axis=1) # remove sample column
 
@@ -138,7 +138,7 @@ class Model:
 		model_type: string specifying classifier.  one of rf, gbt, svm, log
 		'''
 		self.gs = GridSearchCV(self.pipeline, self.param, cv=5, n_jobs=-1, scoring=score, refit=score).fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
-		dill.dump(self.gs, file = open(self.base+"model_"+model_type, "wb")) # save model
+		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
 	def import_files(self, model_type):
 		''' 
 		import saved files for future shap, predict, and score functions
@@ -147,10 +147,10 @@ class Model:
 		model_type: string specifying classifier.  one of rf, gbt, svm, log
 		'''
 
-		self.gs = dill.load(open(self.base+"model_"+model_type, "rb"))
-		self.x_train = dill.load(open(self.base+"x_train", "rb"))
-		self.x_test = dill.load(open(self.base+"x_test", "rb"))
-		self.y_test = dill.load(open(self.base+"y_test", "rb"))
+		self.gs = dill.load(open(self.base+"/"+model_type+"/model", "rb"))
+		self.x_train = dill.load(open(self.base+"/"+model_type+"/x_train", "rb"))
+		self.x_test = dill.load(open(self.base+"/"+model_type+"/x_test", "rb"))
+		self.y_test = dill.load(open(self.base+"/"+model_type+"/y_test", "rb"))
 
 		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column 
 		self.x_test = self.x_test.drop(labels='sample', axis=1) # drop sample column
@@ -160,7 +160,7 @@ class Model:
 		explainer = shap.KernelExplainer(self.gs.predict_proba, self.x_train) #shap.sample(x_train, 50)) # explain predictions of the model
 		#test_sample = x_test.iloc[:250,:]
 		self.shap_values = explainer.shap_values(self.x_test)
-		dill.dump(shap_values, file = open(self.base+"shapvalues", "wb"))
+		dill.dump(shap_values, file = open(self.base+"/"+model_type+"/shapvalues", "wb"))
 
 	def predict(self):
 		''' predict on test set '''
@@ -247,13 +247,13 @@ class Model:
                 spec: specificity list
                 npv: npv list
 	        '''
-		open(self.base+model_type+"_auprc","a").write("\n".join(map(str, auprc)))
-		open(self.base+model_type+"_auc","a").write("\n".join(map(str, auc)))
-		open(self.base+model_type+"_precision","a").write("\n".join(map(str, prec)))
-		open(self.base+model_type+"_recall","a").write("\n".join(map(str, recall)))
-		open(self.base+model_type+"_f1","a").write("\n".join(map(str, f1)))
-		open(self.base+model_type+"_npv","a").write("\n".join(map(str, npv)))
-		open(self.base+model_type+"_specificity","a").write("\n".join(map(str, spec)))
+		open(self.base+"/"+model_type+"/auprc","a").write("\n".join(map(str, auprc)))
+		open(self.base+"/"+model_type+"/auc","a").write("\n".join(map(str, auc)))
+		open(self.base+"/"+model_type+"/precision","a").write("\n".join(map(str, prec)))
+		open(self.base+"/"+model_type+"/recall","a").write("\n".join(map(str, recall)))
+		open(self.base+"/"+model_type+"/f1","a").write("\n".join(map(str, f1)))
+		open(self.base+"/"+model_type+"/npv","a").write("\n".join(map(str, npv)))
+		open(self.base+"/"+model_type+"/specificity","a").write("\n".join(map(str, spec)))
 
 	def conf_int(self, stat, name):
 		''' 

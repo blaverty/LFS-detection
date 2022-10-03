@@ -21,7 +21,7 @@ def main():
 	spec = []
 	npv = []
 
-	for i in range(20): # repeat for CI calculation
+	for i in range(100): # repeat for CI calculation
 		model = Model(datafile=datafile, base=base) # initiate
 		model.split() # training and test splits	
 		model.save_splits(model_type) # save splits
