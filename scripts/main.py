@@ -3,7 +3,8 @@ from model import Model # import my class
 import dill
 
 def main():
-	stream = open('args.yaml', 'r')
+	# arguments
+	stream = open('args.yaml', 'r') 
 	args = yaml.load(stream, Loader=yaml.Loader) # load yaml file for arguments
 	print("arguments loaded")
 	datafile = args['datafile']
@@ -11,7 +12,7 @@ def main():
 	base = args['base']
 	score = args['score']
 	pipeline_options = args['pipeline_options'] # loading order of dict perserved
-
+	# track performance across repeats
 	auprc = []
 	auc = []
 	prec = []
@@ -20,23 +21,24 @@ def main():
 	spec = []
 	npv = []
 
-	for i in range(20):
+	for i in range(20): # repeat for CI calculation
 		model = Model(datafile=datafile, base=base) # initiate
 		model.split() # training and test splits	
-		model.save_splits()
-		model.init_pipeline(pipeline_options)
-		model.parameters_preprocessing() # make parameters
-		model.parameters_classifier(model_type)  
+		model.save_splits(model_type) # save splits
+		model.init_pipeline(pipeline_options) # initiate pipeline
+		model.parameters_preprocessing() # preprocessing parameters
+		print(model.pipeline)
+		model.parameters_classifier(model_type) # classifier parameters 
 		model.fit(score=score, model_type=model_type) # grid search
-## 		model.shap()
-##		model.import_files(model_type=model_type)
-##		print(model.gs.best_estimator_.get_params())
+## 		model.shap() # run shap 
+##		model.import_files(model_type=model_type) # import files is dont run split 
+		print(model.gs.best_estimator_.get_params())
 		model.predict()	# predict on test set	
-		model.score() # calculate score
-		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv) # save score to list for CI
+		model.score() # evaluate performance
+		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv)  # add performance to list for CI
 
-	model.save_score_list(model_type, auprc, auc, prec, recall, f1, spec, npv)
-	model.conf_int(auprc, "auprc") # calculate confidence intervals after iterations 
+	model.save_score_list(model_type, auprc, auc, prec, recall, f1, spec, npv) # save performance list 
+	model.conf_int(auprc, "auprc") # calculate CI 
 	model.conf_int(auc, "auc")
 	model.conf_int(prec, "precision")
 	model.conf_int(recall, "recall")

@@ -5,7 +5,7 @@ n_samples: 246
 model_type: "log" # "rf", "log", "svm", "gbt"
 score: "f1" # score to optimize in grid search
 pipeline_options: # dictionary, set to "None" to omit step
+        'sampling': SMOTE() # SMOTE() or "None"
         'normalization': StandardScaler() # StandardScaler() or "None"
         'dimensionality_reduction': PCA() # PCA() or "None"
-        'sampling': SMOTE() # SMOTE() or "None"
         'classifier': RandomForestClassifier() # RandomForestClassifier() or "None"
