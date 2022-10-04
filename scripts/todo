@@ -1,1 +1,3 @@
-save train test splits as separate for each model type
+test power transformer
+make custom step in pipeline for getting number of samples for quantile transformer
+get best params from 100 run and lookfor patterns then fine tune log model

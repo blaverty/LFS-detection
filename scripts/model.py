@@ -5,8 +5,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler
 from sklearn.preprocessing import RobustScaler
 from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import PowerTransformer 
 from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD as SVD
 from sklearn.decomposition import KernelPCA
@@ -25,6 +27,7 @@ from sklearn.svm import SVC
 import shap
 import umap
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, roc_curve, auc, classification_report, confusion_matrix
+from statistics import median
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from sklearn.preprocessing import StandardScaler
@@ -92,7 +95,7 @@ class Model:
 		if 'sampling' in k:
 			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] # StandardScaler(), RobustScaler(), MinMaxScaler(), QuantileTransformer()  normalization options
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=1000)] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
 			self.param['dimensionality_reduction'] = [PCA()] # dimensionatliy reduction options
 			self.param['dimensionality_reduction__n_components'] = [0.8, 0.85, 0.9, 0.95] # components for PCA
@@ -268,5 +271,6 @@ class Model:
 		lower = max(0.0, np.percentile(stat, p))
 		p = (alpha+((1.0-alpha)/2.0)) * 100
 		upper = min(1.0, np.percentile(stat, p))
-		print(name,' %.1f CI: %.1f%% and %.1f%%' % (alpha*100, lower*100, upper*100))
+		median = median(stat)
+		print(name,' %.1f CI: %.1f%% and %.1f%%' % (median, lower*100, upper*100))
 
