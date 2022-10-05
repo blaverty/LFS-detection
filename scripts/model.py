@@ -95,7 +95,7 @@ class Model:
 		if 'sampling' in k:
 			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=1000)] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=100)] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
 			self.param['dimensionality_reduction'] = [PCA()] # dimensionatliy reduction options
 			self.param['dimensionality_reduction__n_components'] = [0.8, 0.85, 0.9, 0.95] # components for PCA
@@ -271,6 +271,6 @@ class Model:
 		lower = max(0.0, np.percentile(stat, p))
 		p = (alpha+((1.0-alpha)/2.0)) * 100
 		upper = min(1.0, np.percentile(stat, p))
-		median = median(stat)
-		print(name,' %.1f CI: %.1f%% and %.1f%%' % (median, lower*100, upper*100))
+		med = median(stat)
+		print(name,' %.1f CI: %.1f%% and %.1f%%' % (med*100, lower*100, upper*100))
 

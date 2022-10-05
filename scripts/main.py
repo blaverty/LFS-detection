@@ -33,7 +33,7 @@ def main():
 ## 		model.shap() # run shap 
 ##		model.import_files(model_type=model_type) # import files is dont run split 
 		print(model.gs.best_estimator_.get_params())
-		print(model.best_score_)
+		print(model.gs.best_score_)
 		model.predict()	# predict on test set	
 		model.score() # evaluate performance
 		auprc, auc, prec, recall, f1, spec, npv = model.score_list(auprc, auc, prec, recall, f1, spec, npv)  # add performance to list for CI
