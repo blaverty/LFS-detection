@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import dill
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import MaxAbsScaler
@@ -26,7 +26,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.svm import SVC
 import shap
 import umap
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, roc_curve, auc, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, roc_curve, auc, classification_report, confusion_matrix, make_scorer, recall_score, precision_score, average_precision_score, f1_score, roc_auc_score
 from statistics import median
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
@@ -48,6 +48,12 @@ class Model:
 		self.df = pd.read_csv(datafile) # read in data
 		self.base = base+"/"
 
+	def set_train(self):
+		'''set training set when dont split into train and test '''
+		self.y_train = self.df[["TP53"]] # labels
+		self.x_train = self.df.drop(labels="TP53", axis=1) # remove labels from data
+		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column 
+	
 	def split(self):
 		'''split data into training and testing'''
 		y = self.df[["TP53"]] # labels
@@ -95,7 +101,7 @@ class Model:
 		if 'sampling' in k:
 			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=100)] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
 			self.param['dimensionality_reduction'] = [PCA()] # dimensionatliy reduction options
 			self.param['dimensionality_reduction__n_components'] = [0.8, 0.85, 0.9, 0.95] # components for PCA
@@ -132,7 +138,7 @@ class Model:
 			self.param['classifier__solver'] = ['lbfgs'] # 'saga', 'liblinear', 'newton-cg', 'lbfgs', 'sag'  some will give errors because not compatible with penalty
 			self.param['classifier__max_iter'] = [50000]
 
-	def fit(self, score, model_type):
+	def fit(self, model_type):
 		''' 
 		fit model with grid search CV
 		
@@ -140,8 +146,21 @@ class Model:
 		score: string specifying score to optimize during CV
 		model_type: string specifying classifier.  one of rf, gbt, svm, log
 		'''
-		self.gs = GridSearchCV(self.pipeline, self.param, cv=5, n_jobs=-1, scoring=score, refit=score).fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
-		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
+		
+		scores = {
+			"auprc": make_scorer(average_precision_score),
+			"precision": make_scorer(precision_score),
+			"recall": make_scorer(recall_score),
+			"f1": make_scorer(f1_score),
+			"specificity": make_scorer(recall_score, pos_label=0),
+			"npv": make_scorer(precision_score, pos_label=0),
+			"auc": make_scorer(roc_auc_score)
+			} # metrics calculated during cv
+
+		folds = RepeatedStratifiedKFold(n_splits=10, n_repeats=100)
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, n_jobs=-1, scoring=scores, refit="auprc").fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
+#		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
+
 	def import_files(self, model_type):
 		''' 
 		import saved files for future shap, predict, and score functions
@@ -165,112 +184,128 @@ class Model:
 		self.shap_values = explainer.shap_values(self.x_test)
 		dill.dump(shap_values, file = open(self.base+"/"+model_type+"/shapvalues", "wb"))
 
-	def predict(self):
-		''' predict on test set '''
-		self.test_pred = self.gs.best_estimator_.predict(self.x_test)
-		self.test_prob = self.gs.best_estimator_.predict_proba(self.x_test)
-		self.cm = confusion_matrix(y_true = self.y_test.values.ravel(), y_pred = self.test_pred)
-
-	def acc(self): 
-		''' accuracy '''
-		return (accuracy_score(y_true=self.y_test, y_pred=self.test_pred))
-	
-	def prec(self): 
-		''' ppv '''
-		return (precision_score(y_true=self.y_test, y_pred=self.test_pred))
-
-	def recall(self): 
-		''' recall '''
-		return (recall_score(y_true=self.y_test, y_pred=self.test_pred,))
-
-	def npv(self): 
-		''' npv '''
-		return (self.cm[0,0]/(self.cm[0,0]+self.cm[1,0]))
-
-	def spec(self): 
-		''' specificity '''
-		return (self.cm[0,0]/(self.cm[0,0]+self.cm[0,1]))
-	
-	def f1(self): 
-		''' f1 score '''
-		return (f1_score(y_true=self.y_test, y_pred=self.test_pred))
-
-	def calc_auc(self): 
-		''' auroc '''
-		fpr, tpr, _ = roc_curve(self.y_test, self.test_prob[:,1]) # fpr and tpr 
-		return (auc(fpr, tpr)) 
-	
-	def calc_auprc(self): 
-		''' auprc '''
-		return (average_precision_score(self.y_test, self.test_prob[:, 1]))
-
-	def score(self): 
-		''' calculate performance on test set '''
-		self.accuracy = self.acc() 
-		self.precision = self.prec()
-		self.recall = self.recall()
-		self.npv = self.npv()
-		self.specificity = self.spec()
-		self.f1 = self.f1()
-		self.auc = self.calc_auc() 
-		self.auprc = self.calc_auprc()
-
-	def score_list(self, auprc, auc, prec, recall, f1, spec, npv):
-		''' add scores to lists to record each iteration 
-		
-		Arguments
-		auprc: auprc list
-		auc: auc list
-		prec: precision list
-		recall: recall list
-		f1: f1 list
-		spec: specificity list
-		npv: npv list
-		'''
-		auprc.append(self.auprc)
-		auc.append(self.auc)
-		prec.append(self.precision)
-		recall.append(self.recall)
-		f1.append(self.f1)
-		spec.append(self.specificity)
-		npv.append(self.npv)
-		return(auprc, auc, prec, recall, f1, spec, npv)
-
-	def save_score_list(self, model_type, auprc, auc, prec, recall, f1, spec, npv):
-		''' 	
-		save performance list for CI calc 
-		
-		Arguments
-		model_type: string specifing classifier type.  one of rf, svm, log, gbt 	
-		auprc: auprc list     	
-                auc: auc list
-                prec: precision list
-                recall: recall list
-                f1: f1 list
-                spec: specificity list
-                npv: npv list
-	        '''
-		open(self.base+"/"+model_type+"/auprc","a").write("\n".join(map(str, auprc)))
-		open(self.base+"/"+model_type+"/auc","a").write("\n".join(map(str, auc)))
-		open(self.base+"/"+model_type+"/precision","a").write("\n".join(map(str, prec)))
-		open(self.base+"/"+model_type+"/recall","a").write("\n".join(map(str, recall)))
-		open(self.base+"/"+model_type+"/f1","a").write("\n".join(map(str, f1)))
-		open(self.base+"/"+model_type+"/npv","a").write("\n".join(map(str, npv)))
-		open(self.base+"/"+model_type+"/specificity","a").write("\n".join(map(str, spec)))
-
-	def conf_int(self, stat, name):
+	def cv_performance(self, name):
 		''' 
-		calculate confidence intervals of performance metrics
+		calculate and print confidence intervals of repeated cv 
 
 		Arguments
-		stat: metric list
 		name: string specifying metric 
 		'''
-		alpha = 0.95
-		p = ((1.0-alpha)/2.0) * 100
-		lower = max(0.0, np.percentile(stat, p))
-		p = (alpha+((1.0-alpha)/2.0)) * 100
-		upper = min(1.0, np.percentile(stat, p))
-		med = median(stat)
-		print(name,' %.1f CI: %.1f%% and %.1f%%' % (med*100, lower*100, upper*100))
+		index = self.gs.best_index_
+		mean = self.gs.cv_results_["mean_test_"+name][index]
+		std = self.gs.cv_results_["std_test_"+name][index]
 
+		upper = mean+2*std
+		lower = mean-2*std
+		return(name,'%.1f CI: %.1f%% - %.1f%%' % (mean, lower*100, min(upper*100, 100)))
+
+#	def cv_performance(self):
+#		''' return confidence intervals of repeated cv for all metrics '''
+#		return(" ".join(self.calc_cv_performance("auprc")))
+#		return(" ".join(self.calc_cv_performance("precision")))
+#		return(" ".join(self.calc_cv_performance("recall")))
+#		return(" ".join(self.calc_cv_performance("f1")))
+#		return(" ".join(self.calc_cv_performance("specificity")))
+#		return(" ".join(self.calc_cv_performance("npv")))
+#		return(" ".join(self.calc_cv_performance("auc")))
+	
+
+
+
+
+
+#	def predict(self):
+#		''' predict on test set '''
+#		self.test_pred = self.gs.best_estimator_.predict(self.x_test)
+#		self.test_prob = self.gs.best_estimator_.predict_proba(self.x_test)
+#		self.cm = confusion_matrix(y_true = self.y_test.values.ravel(), y_pred = self.test_pred)
+#
+#	def acc(self): 
+#		''' accuracy '''
+#		return (accuracy_score(y_true=self.y_test, y_pred=self.test_pred))
+#	
+#	def prec(self): 
+#		''' ppv '''
+#		return (precision_score(y_true=self.y_test, y_pred=self.test_pred))
+#
+#	def recall(self): 
+#		''' recall '''
+#		return (recall_score(y_true=self.y_test, y_pred=self.test_pred,))
+#
+#	def npv(self): 
+#		''' npv '''
+#		return (self.cm[0,0]/(self.cm[0,0]+self.cm[1,0]))
+#
+#	def spec(self): 
+#		''' specificity '''
+#		return (self.cm[0,0]/(self.cm[0,0]+self.cm[0,1]))
+#	
+#	def f1(self): 
+#		''' f1 score '''
+#		return (f1_score(y_true=self.y_test, y_pred=self.test_pred))
+#
+#	def calc_auc(self): 
+#		''' auroc '''
+#		fpr, tpr, _ = roc_curve(self.y_test, self.test_prob[:,1]) # fpr and tpr 
+#		return (auc(fpr, tpr)) 
+#	
+#	def calc_auprc(self): 
+#		''' auprc '''
+#		return (average_precision_score(self.y_test, self.test_prob[:, 1]))
+#
+#	def score(self): 
+#		''' calculate performance on test set '''
+#		self.accuracy = self.acc() 
+#		self.precision = self.prec()
+#		self.recall = self.recall()
+#		self.npv = self.npv()
+#		self.specificity = self.spec()
+#		self.f1 = self.f1()
+#		self.auc = self.calc_auc() 
+#		self.auprc = self.calc_auprc()
+#
+#	def score_list(self, auprc, auc, prec, recall, f1, spec, npv):
+#		''' add scores to lists to record each iteration 
+#		
+#		Arguments
+#		auprc: auprc list
+#		auc: auc list
+#		prec: precision list
+#		recall: recall list
+#		f1: f1 list
+#		spec: specificity list
+#		npv: npv list
+#		'''
+#		auprc.append(self.auprc)
+#		auc.append(self.auc)
+#		prec.append(self.precision)
+#		recall.append(self.recall)
+#		f1.append(self.f1)
+#		spec.append(self.specificity)
+#		npv.append(self.npv)
+#		return(auprc, auc, prec, recall, f1, spec, npv)
+#
+#	def save_score_list(self, model_type, auprc, auc, prec, recall, f1, spec, npv):
+#		''' 	
+#		save performance list for CI calc 
+#		
+#		Arguments
+#		model_type: string specifing classifier type.  one of rf, svm, log, gbt 	
+#		auprc: auprc list     	
+#                auc: auc list
+#                prec: precision list
+#                recall: recall list
+#                f1: f1 list
+#                spec: specificity list
+#                npv: npv list
+#	        '''
+#		open(self.base+"/"+model_type+"/auprc","a").write("\n".join(map(str, auprc)))
+#		open(self.base+"/"+model_type+"/auc","a").write("\n".join(map(str, auc)))
+#		open(self.base+"/"+model_type+"/precision","a").write("\n".join(map(str, prec)))
+#		open(self.base+"/"+model_type+"/recall","a").write("\n".join(map(str, recall)))
+#		open(self.base+"/"+model_type+"/f1","a").write("\n".join(map(str, f1)))
+#		open(self.base+"/"+model_type+"/npv","a").write("\n".join(map(str, npv)))
+#		open(self.base+"/"+model_type+"/specificity","a").write("\n".join(map(str, spec)))
+#
+#
+#

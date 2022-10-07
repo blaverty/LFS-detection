@@ -3,7 +3,6 @@ datafile: "/hpf/largeprojects/davidm/blaverty/classify_lfs/final_model_input.csv
 base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/all" # output
 n_samples: 246
 model_type: "log" # "rf", "log", "svm", "gbt"
-score: "f1" # score to optimize in grid search
 pipeline_options: # dictionary, set to "None" to omit step
         'sampling': SMOTE() # SMOTE() or "None"
         'normalization': StandardScaler() # StandardScaler() or "None"
