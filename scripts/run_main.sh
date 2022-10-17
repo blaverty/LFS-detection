@@ -2,9 +2,9 @@
 
 #PBS -l walltime=200:00:00
 #PBS -l nodes=1:ppn=40
-#PBS -l mem=350g,vmem=350g 
-#PBS -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_umap_ica
-#PBS -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_umap_ica
+#PBS -l mem=250g,vmem=250g 
+#PBS -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_none_option
+#PBS -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_none_option
 #PBS -m e
 
 # umap needs a lot more memory

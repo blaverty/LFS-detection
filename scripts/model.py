@@ -100,13 +100,12 @@ class Model:
 		k = self.pipeline.get_params().keys() # steps in pipeline
 		self.param = {} # dictionary for parameter options 
 		if 'sampling' in k:
-			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
+			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE(), None] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler()] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
-			umap = UMAP()
-			self.param['dimensionality_reduction'] = [PCA(), umap, FastICA(whiten='unit-variance')] # dimensionatliy reduction options
-			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
+			self.param['dimensionality_reduction'] = [PCA(n_components=5), UMAP(n_components=5), FastICA(n_components=5, whiten='unit-variance'), None] # dimensionatliy reduction options
+#			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
 
 	def parameters_classifier(self, model_type):	
 		''' 
