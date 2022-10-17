@@ -20,6 +20,7 @@ def main():
 	model.parameters_preprocessing() # preprocessing parameters
 	print(model.pipeline)
 	model.parameters_classifier(model_type) # classifier parameters 
+	print(model.param)
 	model.fit(model_type=model_type) # grid search
 	print(model.gs.best_estimator_.get_params())
 	# print CI for cv metrics

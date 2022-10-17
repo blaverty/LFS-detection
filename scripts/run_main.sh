@@ -2,12 +2,14 @@
 
 #PBS -l walltime=200:00:00
 #PBS -l nodes=1:ppn=40
-#PBS -l mem=50g,vmem=50g
-#PBS -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_cv
-#PBS -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_cv
+#PBS -l mem=350g,vmem=350g 
+#PBS -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_umap_ica
+#PBS -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_umap_ica
 #PBS -m e
 
-module load python/3.8.1
+# umap needs a lot more memory
+
+module load python #/3.9.2
 cd $PBS_O_WORKDIR
 echo "Starting"
 

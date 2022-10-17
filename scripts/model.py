@@ -10,6 +10,8 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.preprocessing import QuantileTransformer
 from sklearn.preprocessing import PowerTransformer 
 from sklearn.decomposition import PCA
+from sklearn.decomposition import FastICA 
+from umap import UMAP
 from sklearn.decomposition import TruncatedSVD as SVD
 from sklearn.decomposition import KernelPCA
 from imblearn.over_sampling import SMOTE
@@ -25,7 +27,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.svm import SVC
 import shap
-import umap
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, average_precision_score, precision_recall_curve, roc_curve, auc, classification_report, confusion_matrix, make_scorer, recall_score, precision_score, average_precision_score, f1_score, roc_auc_score
 from statistics import median
 import matplotlib.pyplot as plt
@@ -101,10 +102,11 @@ class Model:
 		if 'sampling' in k:
 			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler()] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
-			self.param['dimensionality_reduction'] = [PCA()] # dimensionatliy reduction options
-			self.param['dimensionality_reduction__n_components'] = [0.8, 0.85, 0.9, 0.95] # components for PCA
+			umap = UMAP()
+			self.param['dimensionality_reduction'] = [PCA(), umap, FastICA(whiten='unit-variance')] # dimensionatliy reduction options
+			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
 
 	def parameters_classifier(self, model_type):	
 		''' 
@@ -136,6 +138,7 @@ class Model:
 			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
 			self.param['classifier__penalty'] = ['l2'] # 'l1', 'l2', 'elasticnet'  elastric net needs l1 ratio specificed
 			self.param['classifier__solver'] = ['lbfgs'] # 'saga', 'liblinear', 'newton-cg', 'lbfgs', 'sag'  some will give errors because not compatible with penalty
+			self.param['classifier__class_weight'] = ['None', 'balanced']
 			self.param['classifier__max_iter'] = [50000]
 
 	def fit(self, model_type):
@@ -149,15 +152,15 @@ class Model:
 		
 		scores = {
 			"auprc": make_scorer(average_precision_score),
-			"precision": make_scorer(precision_score),
+			"precision": make_scorer(precision_score, zero_division=1),
 			"recall": make_scorer(recall_score),
 			"f1": make_scorer(f1_score),
 			"specificity": make_scorer(recall_score, pos_label=0),
-			"npv": make_scorer(precision_score, pos_label=0),
+			"npv": make_scorer(precision_score, pos_label=0, zero_division=1),
 			"auc": make_scorer(roc_auc_score)
 			} # metrics calculated during cv
 
-		folds = RepeatedStratifiedKFold(n_splits=10, n_repeats=100)
+		folds = RepeatedStratifiedKFold(n_splits=10, n_repeats=10) 
 		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, n_jobs=-1, scoring=scores, refit="auprc").fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
 #		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
 
