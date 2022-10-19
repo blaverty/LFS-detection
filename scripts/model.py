@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import dill
+import multiprocessing
+from collections import defaultdict
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.preprocessing import StandardScaler
@@ -53,7 +55,7 @@ class Model:
 		'''set training set when dont split into train and test '''
 		self.y_train = self.df[["TP53"]] # labels
 		self.x_train = self.df.drop(labels="TP53", axis=1) # remove labels from data
-		self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column 
+		#self.x_train = self.x_train.drop(labels='sample', axis=1) # remove sample column 
 	
 	def split(self):
 		'''split data into training and testing'''
@@ -100,11 +102,11 @@ class Model:
 		k = self.pipeline.get_params().keys() # steps in pipeline
 		self.param = {} # dictionary for parameter options 
 		if 'sampling' in k:
-			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE(), None] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
+			self.param['sampling'] = [SMOTE()] #, ADASYN(), BorderlineSMOTE(), SVMSMOTE(), None] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25)] #, QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
-			self.param['dimensionality_reduction'] = [PCA(n_components=5), UMAP(n_components=5), FastICA(n_components=5, whiten='unit-variance'), None] # dimensionatliy reduction options
+			self.param['dimensionality_reduction'] = [PCA(n_components=5)] #, UMAP(n_components=5), FastICA(n_components=5, max_iter=1000, whiten='unit-variance'), None] # dimensionatliy reduction options
 #			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
 
 	def parameters_classifier(self, model_type):	
@@ -134,7 +136,7 @@ class Model:
 			self.param['classifier__gamma'] = [0.0001, 0.001, 0.01, 0.1, 1, 10]
 		if model_type == "log":
 			self.param['classifier'] = [LogisticRegression()]
-			self.param['classifier__C'] = [0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
+			self.param['classifier__C'] = [5, 10] #0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
 			self.param['classifier__penalty'] = ['l2'] # 'l1', 'l2', 'elasticnet'  elastric net needs l1 ratio specificed
 			self.param['classifier__solver'] = ['lbfgs'] # 'saga', 'liblinear', 'newton-cg', 'lbfgs', 'sag'  some will give errors because not compatible with penalty
 			self.param['classifier__class_weight'] = ['None', 'balanced']
@@ -148,20 +150,66 @@ class Model:
 		score: string specifying score to optimize during CV
 		model_type: string specifying classifier.  one of rf, gbt, svm, log
 		'''
-		
+	
+		manager = multiprocessing.Manager() # parallelize grid search 
+		y_predict = manager.list()
+
+		def store_pred(y, y_pred): # custom scorer to save if predicted same as truth
+			for n in range(len(y)):
+				if y[n]==y_pred[n]:
+					y_predict.append(True)
+				else:
+					y_predict.append(False)
+			return(1)
+
 		scores = {
-			"auprc": make_scorer(average_precision_score),
+			"auprc": make_scorer(average_precision_score), # optimized in grid seach
 			"precision": make_scorer(precision_score, zero_division=1),
 			"recall": make_scorer(recall_score),
 			"f1": make_scorer(f1_score),
 			"specificity": make_scorer(recall_score, pos_label=0),
 			"npv": make_scorer(precision_score, pos_label=0, zero_division=1),
-			"auc": make_scorer(roc_auc_score)
+			"auc": make_scorer(roc_auc_score),
+			"y_pred": make_scorer(store_pred, needs_proba = False) # custom scorer 
 			} # metrics calculated during cv
+		
+		n_split = 5 
+		n_repeat = 5 
 
-		folds = RepeatedStratifiedKFold(n_splits=10, n_repeats=10) 
-		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, n_jobs=-1, scoring=scores, refit="auprc").fit(self.x_train, self.y_train.values.ravel()) # train model using grid search 
+		folds = RepeatedStratifiedKFold(n_splits=n_split, n_repeats=n_repeat) 
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, scoring=scores, refit=True).fit(self.x_train[:,1:], self.y_train.values.ravel()) # train model using grid search, no n_jobs specified so custom scorer works, exclude sample column for x_train
 #		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
+
+		y_prob = list(y_predict) # T/F if prediction same as truth for every fold and parameter combo 
+		folds_idx = list(folds.split(x_train,y_train)) # indices of cv train and test sets 
+		test_idx = [] # indices of cv test sets
+		for n in range(len(folds_idx)):
+			test_idx.extend(folds_idx[n][1]) # add test indices to list
+		n_params = len(gs.cv_results_['params']) # number of paramer options
+		test_idx.extend(n_params*test_idx) # extend test indices because m param options
+		z = list(zip(test_idx, y_prob)) # zip test indices and y predictions together so know which prediction is which sample
+
+		d = defaultdict(list) # dictionary with list values
+		for k, v in z:
+			d[k].append(v) # group same samples' predictions from multiple repeated cv with all param options
+
+		index = gs_log.best_index_ # best param index
+		best_param_idx_pred = defaultdict(list) # dictionary with key as training index and value as  list of samples' predictions from repeated cv with best param option
+		for k, v in d.items(): # iterate through each sample
+			index = gs_log.best_index_ # best param index
+			while index <= n_params: # stop when index out of range
+				best_param_idx_pred[k].append(v[index]) # dictionary with key as training index and value as  list of samples' predictions from repeated cv with best param option
+				index += n_repeat # change index to repeated cv fold with best param
+
+		samples = self.x_train[:,0] # samples in order of training set
+		d_train_idx_2_sample = {} # dictionary with key as training index and value as sample name
+		for i in range(len(samples)): # iterate over samples
+			d_train_idx_2_sample[i] = samples[i] # dictionary key is training index and value is sample name
+
+		best_param_pred = {} # dictionary with key as training index and value as prediction with best param for all repeated folds 
+		for k, v in best_param_idx_pred.items():
+			best_param_pred[d_train_idx_2_sample[k]] = v
+		dill.dump(best_param_pred, file = open(self.base+"/"+model_type+"/classified", "wb"))
 
 	def import_files(self, model_type):
 		''' 
