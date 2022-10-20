@@ -1,11 +1,10 @@
 #!/bin/bash
 
-#PBS -l walltime=200:00:00
-#PBS -l nodes=1:ppn=40
-#PBS -l mem=500g,vmem=500g 
-#PBS -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_classif
-#PBS -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_classif
-#PBS -m e
+#SBATCH -t 100:00:00
+#SBATCH -N 1 -c 40
+#SBATCH --mem=30g
+#SBATCH -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_o_classif
+#SBATCH -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/log_e_classif
 
 # umap needs a lot more memory
 

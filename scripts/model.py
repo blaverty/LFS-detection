@@ -177,38 +177,42 @@ class Model:
 		n_repeat = 5 
 
 		folds = RepeatedStratifiedKFold(n_splits=n_split, n_repeats=n_repeat) 
-		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, scoring=scores, refit=True).fit(self.x_train[:,1:], self.y_train.values.ravel()) # train model using grid search, no n_jobs specified so custom scorer works, exclude sample column for x_train
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, scoring=scores, refit='auprc').fit(self.x_train.iloc[:,1:], self.y_train.values.ravel()) # train model using grid search, no n_jobs specified so custom scorer works, exclude sample column for x_train
 #		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
 
 		y_prob = list(y_predict) # T/F if prediction same as truth for every fold and parameter combo 
-		folds_idx = list(folds.split(x_train,y_train)) # indices of cv train and test sets 
-		test_idx = [] # indices of cv test sets
+		folds_idx = list(folds.split(self.x_train,self.y_train)) # indices of cv train and test sets 
+		test_idx = [] # indices of training set used for cv test sets
 		for n in range(len(folds_idx)):
 			test_idx.extend(folds_idx[n][1]) # add test indices to list
-		n_params = len(gs.cv_results_['params']) # number of paramer options
+		n_params = len(self.gs.cv_results_['params']) # number of paramer options
 		test_idx.extend(n_params*test_idx) # extend test indices because m param options
 		z = list(zip(test_idx, y_prob)) # zip test indices and y predictions together so know which prediction is which sample
 
 		d = defaultdict(list) # dictionary with list values
 		for k, v in z:
-			d[k].append(v) # group same samples' predictions from multiple repeated cv with all param options
+			d[k].append(v) # dictionary with key as test index and value as list of predictions from repeated cv with all param options
+		print(d)
 
-		index = gs_log.best_index_ # best param index
-		best_param_idx_pred = defaultdict(list) # dictionary with key as training index and value as  list of samples' predictions from repeated cv with best param option
+		index = self.gs.best_index_ # best param index
+		best_param_idx_pred = defaultdict(list) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
 		for k, v in d.items(): # iterate through each sample
-			index = gs_log.best_index_ # best param index
+			index = self.gs.best_index_ # best param index
 			while index <= n_params: # stop when index out of range
-				best_param_idx_pred[k].append(v[index]) # dictionary with key as training index and value as  list of samples' predictions from repeated cv with best param option
+				best_param_idx_pred[k].append(v[index]) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
 				index += n_repeat # change index to repeated cv fold with best param
+		print(best_param_idx_pred)
 
-		samples = self.x_train[:,0] # samples in order of training set
-		d_train_idx_2_sample = {} # dictionary with key as training index and value as sample name
+		samples = self.x_train.iloc[:,0] # samples in order of entire training set for cv, sample index is training set and cv test set index
+		d_train_idx_2_sample = {} # dictionary with key as training set index and value as sample name
 		for i in range(len(samples)): # iterate over samples
 			d_train_idx_2_sample[i] = samples[i] # dictionary key is training index and value is sample name
+		print(d_train_idx_2_sample)
 
-		best_param_pred = {} # dictionary with key as training index and value as prediction with best param for all repeated folds 
+		best_param_pred = {} # dictionary with key as sample name and value as list of prediction with best param for all repeated folds 
 		for k, v in best_param_idx_pred.items():
 			best_param_pred[d_train_idx_2_sample[k]] = v
+		print(best_param_pred)
 		dill.dump(best_param_pred, file = open(self.base+"/"+model_type+"/classified", "wb"))
 
 	def import_files(self, model_type):

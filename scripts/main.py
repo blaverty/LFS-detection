@@ -23,9 +23,8 @@ def main():
 	print(model.param)
 	model.fit(model_type=model_type) # grid search
 	print(model.gs.best_estimator_.get_params())
-	print(
 	# print CI for cv metrics
-	print(" ".join(model.cv_performance('auprc'))) 
+	print(" ".join(model.cv_performance('auprc')))
 	print(" ".join(model.cv_performance('precision')))
 	print(" ".join(model.cv_performance('recall')))
 	print(" ".join(model.cv_performance('f1')))
