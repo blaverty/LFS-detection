@@ -102,11 +102,11 @@ class Model:
 		k = self.pipeline.get_params().keys() # steps in pipeline
 		self.param = {} # dictionary for parameter options 
 		if 'sampling' in k:
-			self.param['sampling'] = [SMOTE()] #, ADASYN(), BorderlineSMOTE(), SVMSMOTE(), None] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
+			self.param['sampling'] = [SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE(), None] # SMOTE(), ADASYN(), BorderlineSMOTE(), SVMSMOTE()  oversampling options
 		if 'normalization' in k:
-			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25)] #, QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
+			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
-			self.param['dimensionality_reduction'] = [PCA(n_components=5)] #, UMAP(n_components=5), FastICA(n_components=5, max_iter=1000, whiten='unit-variance'), None] # dimensionatliy reduction options
+			self.param['dimensionality_reduction'] = [PCA(n_components=5), None] # UMAP(n_components=5), FastICA(n_components=5, max_iter=1000, whiten='unit-variance'), None] # dimensionatliy reduction options
 #			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
 
 	def parameters_classifier(self, model_type):	
@@ -118,29 +118,32 @@ class Model:
 		 '''
 		if model_type == "rf": 
 			self.param['classifier'] = [RandomForestClassifier()]
-			self.param['classifier__n_estimators'] = [1000, 1500, 2000, 2500] 
-			self.param['classifier__max_features'] = [8, 10, 12, 14, 16, 18, 20, 22]
-			self.param['classifier__min_samples_leaf'] = [1, 3, 5, 7, 9]
-			self.param['classifier__min_samples_split'] = [2, 4, 6, 8]
+			self.param['classifier__n_estimators'] = [500] #, 1500, 2000, 2500] 
+			self.param['classifier__max_features'] = [8, 10] #, 12, 14, 16, 18, 20, 22]
+			self.param['classifier__min_samples_leaf'] = [1] #, 3, 5, 7, 9]
+			self.param['classifier__min_samples_split'] = [2]#, 4, 6, 8]
 		if model_type ==  "gbt":
 			self.param['classifier'] = [GradientBoostingClassifier()]
-			self.param['classifier__n_estimators'] = [1000, 1500, 2000, 2500] 
-			self.param['classifier__learning_rate'] = [0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
-			self.param['classifier__min_samples_leaf'] = [1, 3, 5, 7, 9, 11, 13]
-			self.param['classifier__min_samples_split'] = [2, 4, 6, 8, 10]
+			self.param['classifier__n_estimators'] = [500]#, 1500, 2000, 2500] 
+			self.param['classifier__learning_rate'] = [1]#0.0001, 0.00015, 0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10]
+			self.param['classifier__min_samples_leaf'] = [1, 2]#, 3, 5, 7, 9, 11, 13]
+			self.param['classifier__min_samples_split'] = [2]#, 4, 6, 8, 10]
 		if model_type ==  "svm":
 			self.param['classifier'] = [SVC(probability=True)]
-			self.param['classifier__C'] = [0.0001, 0.001, 0.01, 0.1, 1, 10]
-			self.param['classifier__kernel'] = ['linear', 'poly', 'rbf', 'sigmoid'] # if poly works well then tune degree 
-			self.param['classifier__degree'] = [2, 3, 4, 5] # degree for poly
-			self.param['classifier__gamma'] = [0.0001, 0.001, 0.01, 0.1, 1, 10]
+			self.param['classifier__C'] = [1]#0.0001, 0.001, 0.01, 0.1, 1, 10]
+			self.param['classifier__kernel'] = ['linear']#, 'poly', 'rbf', 'sigmoid'] # if poly works well then tune degree 
+			self.param['classifier__degree'] = [2, 3] # 4, 5 degree for poly
+			self.param['classifier__gamma'] = [1]#0.0001, 0.001, 0.01, 0.1, 1, 10]
 		if model_type == "log":
 			self.param['classifier'] = [LogisticRegression()]
-			self.param['classifier__C'] = [5, 10] #0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
+			self.param['classifier__C'] = [0.001, 0.01, 0.1, 1, 5, 10, 50] #[0.001, 0.0015, 0.01, 0.015, 0.1, 0.5, 1, 5, 10, 50, 100]
 			self.param['classifier__penalty'] = ['l2'] # 'l1', 'l2', 'elasticnet'  elastric net needs l1 ratio specificed
 			self.param['classifier__solver'] = ['lbfgs'] # 'saga', 'liblinear', 'newton-cg', 'lbfgs', 'sag'  some will give errors because not compatible with penalty
 			self.param['classifier__class_weight'] = ['None', 'balanced']
-			self.param['classifier__max_iter'] = [50000]
+			self.param['classifier__max_iter'] = [10000]
+
+		
+		dill.dump(self.param, file = open(self.base+"/"+model_type+"/param", "wb")) # save params for graphing change in performance by param 
 
 	def fit(self, model_type):
 		''' 
@@ -173,12 +176,12 @@ class Model:
 			"y_pred": make_scorer(store_pred, needs_proba = False) # custom scorer 
 			} # metrics calculated during cv
 		
-		n_split = 5 
-		n_repeat = 5 
+		n_split = 10 
+		n_repeat = 2 
 
 		folds = RepeatedStratifiedKFold(n_splits=n_split, n_repeats=n_repeat) 
-		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, scoring=scores, refit='auprc').fit(self.x_train.iloc[:,1:], self.y_train.values.ravel()) # train model using grid search, no n_jobs specified so custom scorer works, exclude sample column for x_train
-#		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
+		self.gs = GridSearchCV(self.pipeline, self.param, cv=folds, scoring=scores, refit='auprc', return_train_score=True).fit(self.x_train.iloc[:,1:], self.y_train.values.ravel()) # train model using grid search, no n_jobs specified so custom scorer works, exclude sample column for x_train
+		dill.dump(self.gs, file = open(self.base+"/"+model_type+"/model", "wb")) # save model
 
 		y_prob = list(y_predict) # T/F if prediction same as truth for every fold and parameter combo 
 		folds_idx = list(folds.split(self.x_train,self.y_train)) # indices of cv train and test sets 
@@ -189,31 +192,38 @@ class Model:
 		test_idx.extend(n_params*test_idx) # extend test indices because m param options
 		z = list(zip(test_idx, y_prob)) # zip test indices and y predictions together so know which prediction is which sample
 
-		d = defaultdict(list) # dictionary with list values
+		test_idx_2_pred = defaultdict(list) # dictionary with list values
 		for k, v in z:
-			d[k].append(v) # dictionary with key as test index and value as list of predictions from repeated cv with all param options
-		print(d)
-
+			test_idx_2_pred[k].append(v) # dictionary with key as test index and value as list of predictions from repeated cv with all param options
 		index = self.gs.best_index_ # best param index
-		best_param_idx_pred = defaultdict(list) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
-		for k, v in d.items(): # iterate through each sample
+		test_idx_2_best_param_pred = defaultdict(list) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
+		n_predictions = n_params*n_repeat-1 # number of predictions
+		for k, v in test_idx_2_pred.items(): # iterate through each sample
 			index = self.gs.best_index_ # best param index
-			while index <= n_params: # stop when index out of range
-				best_param_idx_pred[k].append(v[index]) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
-				index += n_repeat # change index to repeated cv fold with best param
-		print(best_param_idx_pred)
+			while index <= n_predictions: # stop when index out of range
+				test_idx_2_best_param_pred[k].append(v[index]) # dictionary with key as testing index and value as  list of samples' predictions from repeated cv with best param option
+				index += n_params # change index to repeated cv fold with best param
 
 		samples = self.x_train.iloc[:,0] # samples in order of entire training set for cv, sample index is training set and cv test set index
-		d_train_idx_2_sample = {} # dictionary with key as training set index and value as sample name
+		train_idx_2_sample = {} # dictionary with key as training set index and value as sample name
 		for i in range(len(samples)): # iterate over samples
-			d_train_idx_2_sample[i] = samples[i] # dictionary key is training index and value is sample name
-		print(d_train_idx_2_sample)
+			train_idx_2_sample[i] = samples[i] # dictionary key is training index and value is sample name
 
-		best_param_pred = {} # dictionary with key as sample name and value as list of prediction with best param for all repeated folds 
-		for k, v in best_param_idx_pred.items():
-			best_param_pred[d_train_idx_2_sample[k]] = v
-		print(best_param_pred)
-		dill.dump(best_param_pred, file = open(self.base+"/"+model_type+"/classified", "wb"))
+		sample_2_best_param_pred = {} # dictionary with key as sample name and value as list of prediction with best param for all repeated folds 
+		for k, v in test_idx_2_best_param_pred.items():
+			sample_2_best_param_pred[train_idx_2_sample[k]] = v
+#		open(self.base+"/"+model_type+"/classified","a").write(sample_2_best_param_pred)
+		dill.dump(sample_2_best_param_pred, file = open(self.base+"/"+model_type+"/classified", "wb"))
+		
+		for k, v in sample_2_best_param_pred.items(): 
+			n=v.count(False) # count number of times prediction is wrong
+			if n > len(v)/2: # print sample if prediciton wrong more than 50% of the time
+				open(self.base+"/"+model_type+"/half_misclassified","a").write(k + " misclassified " + str(n) + " times\n")
+
+		for k, v in sample_2_best_param_pred.items(): 
+			n=v.count(False) # count number of times prediction is wrong
+			if n > 0:
+				open(self.base+"/"+model_type+"/misclassified","a").write(k + " misclassified " + str(n) + " times\n")
 
 	def import_files(self, model_type):
 		''' 

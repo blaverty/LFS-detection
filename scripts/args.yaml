@@ -2,7 +2,7 @@
 datafile: "/hpf/largeprojects/davidm/blaverty/classify_lfs/final_model_input.csv" # input file
 base: "/hpf/largeprojects/davidm/blaverty/classify_lfs/output/all" # output
 n_samples: 246
-model_type: "log" # "rf", "log", "svm", "gbt"
+model_type: "gbt" # "rf", "log", "svm", "gbt"
 pipeline_options: # dictionary, set to "None" to omit step
         'sampling': SMOTE() # SMOTE() or "None"
         'normalization': StandardScaler() # StandardScaler() or "None"
