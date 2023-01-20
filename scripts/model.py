@@ -106,7 +106,7 @@ class Model:
 		if 'normalization' in k:
 			self.param['normalization'] = [QuantileTransformer(output_distribution="uniform", n_quantiles=25), QuantileTransformer(output_distribution="normal", n_quantiles=25), StandardScaler(), RobustScaler(), MinMaxScaler(), None] #[QuantileTransformer(output_distribution="uniform", n_quantiles=42), QuantileTransformer(output_distribution="normal", n_quantiles=42), StandardScaler(), RobustScaler(), MinMaxScaler()] 
 		if 'dimensionality_reduction' in k:
-			self.param['dimensionality_reduction'] = [PCA(n_components=5), None] # UMAP(n_components=5), FastICA(n_components=5, max_iter=1000, whiten='unit-variance'), None] # dimensionatliy reduction options
+			self.param['dimensionality_reduction'] = [None] # UMAP(n_components=5), FastICA(n_components=5, max_iter=1000, whiten='unit-variance'), None] # dimensionatliy reduction options
 #			self.param['dimensionality_reduction__n_components'] = [2, 3, 5, 10, 15] # components for PCA
 
 	def parameters_classifier(self, model_type):	

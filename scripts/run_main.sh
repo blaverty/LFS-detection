@@ -3,8 +3,8 @@
 #SBATCH -t 200:00:00
 #SBATCH -N 1 -c 20
 #SBATCH --mem=50g
-#SBATCH -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/gbt_10_o
-#SBATCH -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/gbt_10_e
+#SBATCH -o /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/svm_10_o
+#SBATCH -e /hpf/largeprojects/davidm/blaverty/classify_lfs/logs/svm_10_e
 
 # umap needs a lot more memory
 
